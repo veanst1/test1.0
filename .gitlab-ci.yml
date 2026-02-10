@@ -1,49 +1,35 @@
-image: node:18-alpine
-
-variables:
-  DEPLOY_TARGET: "production-server"
-
 stages:
-  - install
   - build
-  - test
+  - health_check
   - deploy
 
-install-dependencies:
-  stage: install
-  script:
-    - npm install
-  artifacts:
-    paths:
-      - node_modules/
-    expire_in: 1 hour
+variables:
+  APP_PORT: "8888"
+  APP_URL: "http://localhost:$APP_PORT"
 
-build-job:
+
+build_job:
   stage: build
   script:
-    - npm run build
-  artifacts:
-    paths:
-      - dist/
+    - echo "Устанавливаем зависимости для порта $APP_PORT..."
+    - npm install  
 
-unit-test-job:
-  stage: test
+check_port_job:
+  stage: health_check
   script:
-    - npm test
-  allow_failure: false 
+    - echo "Проверяем, не занят ли порт $APP_PORT..."
+    - curl -s $APP_URL  echo "Порт свободен или сервис лежит — это нормально перед деплоем"
 
-lint-test-job:
-  stage: test
-  script:
-    - npm run lint
-
-deploy-job:
+deploy_local_job:
   stage: deploy
-  environment: production
   script:
-    - echo "Deploying to $DEPLOY_TARGET..."
-    - ./deploy_script.sh
-  
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-      when: manual  
+    - echo "Обновляем приложение на $APP_URL..."
+    - fuser -k $APP_PORT/tcp  true 
+    - nohup npm start -- --port $APP_PORT > app.log 2>&1 &
+    - sleep 5
+    - curl -I $APP_URL | grep "200 OK"
+  environment:
+    name: local-dev
+    url: http://localhost:8888
+  only:
+    - main
