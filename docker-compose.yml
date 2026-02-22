@@ -1,4 +1,4 @@
-
+version: '3.8'
 
 services:
   taskmaster-app:
@@ -22,25 +22,6 @@ services:
       retries: 3
       start_period: 40s
 
-  taskmaster-backup:
-    image: alpine:latest
-    container_name: taskmaster-backup
-    depends_on:
-      - taskmaster-app
-    volumes:
-      - ./data:/data
-      - ./backups:/backups
-    command: >
-      sh -c "
-      echo 'Создание резервной копии каждые 24 часа' &&
-      while true; do
-        tar -czf /backups/taskmaster-backup-$$(date +%Y%m%d-%H%M%S).tar.gz /data;
-        echo 'Резервная копия создана: $$(date)';
-        sleep 86400;
-      done"
-    networks:
-      - taskmaster-network
-
 networks:
   taskmaster-network:
     driver: bridge
@@ -48,4 +29,3 @@ networks:
 
 volumes:
   data:
-  backups:
