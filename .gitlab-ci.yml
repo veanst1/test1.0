@@ -1,22 +1,26 @@
-image: docker:24.0.5
-
 variables:
-  DOCKER_HOST: tcp://docker:2375
-  DOCKER_TLS_CERTDIR: "" 
   IMAGE_NAME: "$CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_SHORT_SHA"
 
-services:
-  - name: docker:24.0.5-dind
-    alias: docker
-    command: ["--tls=false"]
-
-stages:          
+stages:
   - build
   - deploy
 
-build-job:       
+build-job:
   stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
   script:
-    - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
-    - docker build -t "$IMAGE_NAME" .
-    - docker push "$IMAGE_NAME"
+    # Kaniko сам подхватит доступы к реестру из этой переменной
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(printf "%s:%s" "gitlab-ci-token" "$CI_JOB_TOKEN" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor
+      --context "$CI_PROJECT_DIR"
+      --dockerfile "$CI_PROJECT_DIR/Dockerfile"
+      --destination "$IMAGE_NAME"
+
+deploy-job:
+  stage: deploy
+  image: docker:24.0.5
+  script:
+    - echo "Тут мы просто имитируем деплой, так как на этом раннере docker run не заведется"
+    - echo "Pulling $IMAGE_NAME"
