@@ -1,4 +1,10 @@
+image: docker:24.0.5  
+
+services:
+  - docker:24.0.5-dind 
+
 variables:
+  DOCKER_TLS_CERTDIR: "/certs" 
   IMAGE_NAME: "$CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_SHORT_SHA"
 
 stages:          
@@ -7,18 +13,7 @@ stages:
 
 build-job:       
   stage: build
-  before_script:
-    - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
   script:
-    - echo "Building and pushing image..."
+    - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
     - docker build -t "$IMAGE_NAME" .
     - docker push "$IMAGE_NAME"
-
-
-deploy-job:      
-  stage: deploy  
-  script:
-    - echo "Deploying the new pipe..."
-    - docker pull "$IMAGE_NAME"
-    - docker rm -f taskmaster || true
-    - docker run -d --name taskmaster -p 8080:80 "$IMAGE_NAME"
