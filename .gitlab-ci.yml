@@ -1,5 +1,5 @@
 variables:
-  IMAGE_NAME: '$CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_SHORT_SHA'
+  IMAGE_NAME: "$CI_REGISTRY/$CI_PROJECT_PATH:$CI_COMMIT_SHORT_SHA"
 
 stages:          
   - build
@@ -8,15 +8,17 @@ stages:
 build-job:       
   stage: build
   before_script:
-    - echo '$PASS' | docker login -u "$USER" --password-stdin "$CI_REGISTRY" 
+    - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
   script:
-    - docker build -t "$IMAGE_NAME"
+    - echo "Building and pushing image..."
+    - docker build -t "$IMAGE_NAME" .
     - docker push "$IMAGE_NAME"
-  tags:
-    - test
+
 
 deploy-job:      
   stage: deploy  
   script:
-    - docker pull $IMAGE_NAME"
-    - docker run -d -p 8080:8080 $IMAGE_NAME"
+    - echo "Deploying the new pipe..."
+    - docker pull "$IMAGE_NAME"
+    - docker rm -f taskmaster || true
+    - docker run -d --name taskmaster -p 8080:80 "$IMAGE_NAME"
